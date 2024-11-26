@@ -356,3 +356,66 @@ btnSort.addEventListener("click", function (e) {
     sorted = !sorted;
   }
 });
+"use strict";
+
+// Example: Fetch accounts from backend
+const fetchAccounts = async () => {
+  try {
+    const response = await fetch("http://localhost:3000/api/accounts");
+    if (!response.ok) throw new Error("Failed to fetch accounts");
+    const accounts = await response.json();
+
+    // Display fetched accounts in the console
+    console.log(accounts);
+
+    // If you need to update the UI with fetched data:
+    accounts.forEach((account) => {
+      console.log(`${account.owner}'s movements:`, account.movements);
+      // You can populate your frontend elements here, for example:
+      const accountHTML = `
+        <div>
+          <h3>${account.owner}</h3>
+          <p>Interest Rate: ${account.interestRate}%</p>
+          <p>Movements: ${account.movements.join(", ")}</p>
+        </div>
+      `;
+      document.querySelector(".accounts").insertAdjacentHTML("beforeend", accountHTML);
+    });
+  } catch (error) {
+    console.error("Error fetching accounts:", error);
+  }
+};
+
+// Call the fetchAccounts function on page load or based on user actions
+fetchAccounts();
+const transferMoney = async (sender, receiver, amount) => {
+  try {
+    const response = await fetch("http://localhost:3000/api/transfer", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sender, receiver, amount }),
+    });
+
+    if (!response.ok) throw new Error("Transfer failed");
+    const data = await response.json();
+    console.log(data.message);
+
+    // Update the UI or show success message
+    alert(data.message);
+  } catch (error) {
+    console.error("Error transferring money:", error);
+    alert("Transfer failed. Please try again.");
+  }
+};
+
+// Example usage: Trigger the transfer function when a button is clicked
+document.querySelector(".form__btn--transfer").addEventListener("click", (e) => {
+  e.preventDefault();
+  const sender = inputLoginUsername.value;
+  const receiver = inputTransferTo.value;
+  const amount = +inputTransferAmount.value;
+
+  transferMoney(sender, receiver, amount);
+});
