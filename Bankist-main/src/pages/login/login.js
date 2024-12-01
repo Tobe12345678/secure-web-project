@@ -195,13 +195,71 @@ btnLogout.addEventListener("click", function () {
   loginTooltip.style.display = "block";
   navContainer.style.marginTop = "10%";
 });
+// Newly added Logout timer and a logout button handler
+btnLogout.addEventListener("click", () => {
+  currentAccount = null;
+  containerApp.style.opacity = 0;
+  labelWelcome.textContent = "Log in to get started";
+  if (logoutTimer) clearInterval(logoutTimer);
+});
+
 // Login functionality
-btnLogin.addEventListener("click", function (e) {
+btnLogin.addEventListener("click", async (e) => {
+  e.preventDefault(); // Newly added login functionality
+  const username = inputLoginUsername.value;
+  const pin = inputLoginPin.value;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, pin }),
+    });
+
+    if (!response.ok) throw new Error("Invalid credentials");
+
+    currentAccount = await response.json();
+
+    // Update UI
+    labelWelcome.textContent = `Welcome back, ${currentAccount.owner.split(" ")[0]}!`;
+    containerApp.style.opacity = 1;
+    inputLoginUsername.value = inputLoginPin.value = "";
+    inputLoginPin.blur();
+    updateUI(currentAccount);
+
+    // Start logout timer
+    if (logoutTimer) clearInterval(logoutTimer);
+    logoutTimer = startLogoutTimer();
+  } catch (error) {
+    warningText.textContent = error.message;
+    console.error(error);
+  }
+  // Fetch Account Data
+  const updateUI = async (account) => {
+    // Fetch updated account data from the backend
+    const response = await fetch(`${API_BASE_URL}/accounts/${account.id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    const updatedAccount = await response.json();
+  
+    // Update balance, transactions, and other details in the UI
+    displayMovements(updatedAccount.movements);
+    displayBalance(updatedAccount.balance);
+    displaySummary(updatedAccount);
+  };
+  
+});
   //prevent form from submiting
   e.preventDefault();
   currentAccount = accounts.find(
     (acc) => acc.username === inputLoginUsername.value
   );
+
   ///Login validation
   let bothInputsEmpty =
     inputLoginUsername.value.length === 0 && inputLoginPin.value.length === 0;
@@ -259,8 +317,7 @@ btnLogin.addEventListener("click", function (e) {
       //Start logout
       timing = startLogoutTimer();
     }
-  }
-});
+  };
 //Tranfer money functionality
 btnTransfer.addEventListener("click", function (e) {
   e.preventDefault();
@@ -292,6 +349,38 @@ btnTransfer.addEventListener("click", function (e) {
     }
   }
 });
+// Code for updated money transfer
+btnTransfer.addEventListener("click", async (e) => {
+  e.preventDefault();
+  const amount = Number(inputTransferAmount.value);
+  const recipient = inputTransferTo.value;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/transfer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        senderId: currentAccount.id,
+        recipientUsername: recipient,
+        amount,
+      }),
+    });
+
+    if (!response.ok) throw new Error("Transfer failed");
+
+    inputTransferAmount.value = inputTransferTo.value = "";
+    updateUI(currentAccount);
+
+    // Reset logout timer
+    clearInterval(logoutTimer);
+    logoutTimer = startLogoutTimer();
+  } catch (error) {
+    console.error(error.message);
+  }
+});
+
 // Close account functionality
 btnClose.addEventListener("click", function (e) {
   e.preventDefault();
@@ -348,6 +437,33 @@ btnLoan.addEventListener("click", function (e) {
   }
   inputLoanAmount.value = "";
 });
+// Code for updated Loan Request
+btnLoan.addEventListener("click", async (e) => {
+  e.preventDefault();
+  const amount = Number(inputLoanAmount.value);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/loan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ accountId: currentAccount.id, amount }),
+    });
+
+    if (!response.ok) throw new Error("Loan request failed");
+
+    inputLoanAmount.value = "";
+    updateUI(currentAccount);
+
+    // Reset logout timer
+    clearInterval(logoutTimer);
+    logoutTimer = startLogoutTimer();
+  } catch (error) {
+    console.error(error.message);
+  }
+});
+
 // Sort functionality
 btnSort.addEventListener("click", function (e) {
   e.preventDefault();
@@ -357,5 +473,9 @@ btnSort.addEventListener("click", function (e) {
   }
 });
 
+// API Base URL
+const API_BASE_URL = "http://localhost:5000/api";
+
+// Code for the Login Functionality
 
 
